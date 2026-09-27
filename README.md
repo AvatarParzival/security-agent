@@ -1,219 +1,159 @@
-# Security Code Review Agent — IBM Bob Hackathon
+# 🔒 Security Code Review Agent
+### IBM Bob 2.0 Hackathon Submission
 
-A zero-dependency Python script that scans any public (or private, with a token)
-GitHub repository for security vulnerabilities and produces a structured Markdown report.
+> **Turn hours of manual security review into seconds.**  
+> Paste a GitHub URL — get a full vulnerability report instantly.
 
 ---
 
-## What it detects
+## 👥 Team
 
-| Category | Examples |
+| Name | Role |
 |---|---|
-| 🔴 **Hardcoded secrets** | Passwords, API keys, tokens, private keys, AWS credentials |
-| 🟠 **SQL injection** | String-concatenated queries, f-string queries, raw `execute()` calls |
-| 🟠 **XSS** | `innerHTML`, `document.write()`, `eval()`, React `dangerouslySetInnerHTML` |
-| 🟡 **Insecure crypto / auth** | MD5, SHA-1, `verify=False`, `ssl.CERT_NONE`, Django debug/wildcard config |
+| **Abdullah Zubair** | Developer |
+| **Saleha Imtiaz** | Developer |
+
+*IBM Bob 2.0 Hackathon — September 2026*
 
 ---
 
-## Requirements
+## 🎯 Problem
 
-- Python **3.10+** (uses `list[...]` type hints and `str.removesuffix`)
-- No third-party packages — uses only the standard library
-- A GitHub personal access token is **optional** but strongly recommended
-  (unauthenticated requests are limited to 60/hour; authenticated = 5,000/hour)
+Security code reviews are:
+- ⏱️ Time-consuming — hours of manual reading
+- 🧠 Expertise-dependent — requires deep security knowledge  
+- ❌ Often skipped — especially under deadline pressure
+
+**Result: vulnerabilities ship to production.**
 
 ---
 
-## Setup
+## ✅ Solution
+
+A desktop application powered by **IBM Bob IDE** that:
+
+1. Takes any GitHub repository URL as input
+2. Automatically fetches all code files via GitHub API
+3. Scans every file for security vulnerabilities using AI
+4. Produces a structured report with exact locations and fixes
+
+**100 files scanned · 24 issues found · in seconds.**
+
+---
+
+## 🖥️ Application Screenshots
+
+### Findings Tab — All vulnerabilities listed by severity
+![Findings Tab](Screenshots/Findings.png)
+
+### Scan Log Tab — Live per-file scan progress
+![Scan Log Tab](Screenshots/Scan.png)
+
+### Report Tab — Full exportable Markdown report
+![Report Tab](Screenshots/Report.png)
+
+---
+
+## 🔍 Vulnerabilities Detected
+
+| Risk | Category | Examples |
+|:---:|---|---|
+| 🔴 **Critical** | Hardcoded secrets | Passwords, API keys, tokens, secret keys, private keys, AWS credentials |
+| 🟠 **High** | Injection | SQL string concatenation, `eval()` / code injection, `innerHTML` XSS |
+| 🟡 **Medium** | Insecure config | MD5 / SHA-1 hashing, `DEBUG = True`, wildcard `ALLOWED_HOSTS`, `verify=False` |
+| 🟢 **Low** | Best-practice gaps | `ssl.CERT_NONE`, miscellaneous advisory patterns |
+
+---
+
+## 📊 Demo Results
+
+Tested on [PyGoat](https://github.com/adeyosemanputra/pygoat) — an intentionally 
+vulnerable Python/Django application:
+
+| 🔴 Critical | 🟠 High | 🟡 Medium | 🟢 Low | Files Scanned |
+|:---:|:---:|:---:|:---:|:---:|
+| 8 | 6 | 10 | 0 | 100 |
+
+---
+
+## 🚀 Quick Start
+
+### GUI (Recommended)
 
 ```bash
-# 1. Clone or copy this folder
-cd security-agent
-
-# 2. (Optional but recommended) Create a GitHub token
-#    GitHub → Settings → Developer settings → Personal access tokens → Fine-grained
-#    Grant: Contents = Read-only  (for private repos)
-#    For public repos, no scopes are needed.
-
-# 3. Export the token so you don't have to type it every time
-export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx   # macOS / Linux
-$env:GITHUB_TOKEN = "ghp_xxxxxxxxxxxxxxxxxxxx"  # PowerShell (Windows)
+python app.py
 ```
 
----
+1. Paste a GitHub repository URL
+2. (Optional) Add your GitHub Token for private repos
+3. Click **▶ Start Scan**
+4. Browse results across **Findings**, **Scan Log**, and **Report** tabs
+5. Click **Export Report** to save as Markdown
 
-## Usage
+### CLI
 
-### Basic — public repo, output to terminal
 ```bash
+# Basic scan
 python security_agent.py --repo https://github.com/owner/repo
-```
 
-### Save report to a Markdown file
-```bash
+# Save report to file
 python security_agent.py --repo https://github.com/owner/repo --output report.md
-```
 
-### Pass your token explicitly
-```bash
-python security_agent.py \
-  --repo https://github.com/owner/repo \
-  --token ghp_xxxxxxxxxxxxxxxxxxxx \
-  --output report.md
-```
-
-### Private repo (token required)
-```bash
-python security_agent.py \
-  --repo https://github.com/myorg/private-repo \
-  --output report.md
-```
-The `GITHUB_TOKEN` env var is read automatically if `--token` is not supplied.
-
----
-
-## How to test it
-
-### Option A — scan a known-vulnerable demo repo
-These repositories are designed for security training and contain intentional vulnerabilities:
-
-```bash
-# Python / Django vulnerable app
-python security_agent.py \
-  --repo https://github.com/anxolerd/dvpwa \
-  --output dvpwa_report.md
-
-# Node.js / Express vulnerable app
-python security_agent.py \
-  --repo https://github.com/appsecco/dvna \
-  --output dvna_report.md
-
-# OWASP WebGoat (Java)
-python security_agent.py \
-  --repo https://github.com/WebGoat/WebGoat \
-  --output webgoat_report.md
-```
-
-### Option B — create your own test repo with intentional bad code
-1. Create a new GitHub repo.
-2. Add a file called `test_vulns.py` with content like:
-
-```python
-import hashlib, sqlite3
-
-# BAD: hardcoded credentials
-DB_PASSWORD = "supersecret123"
-API_KEY = "sk-live-abcdef1234567890"
-
-# BAD: SQL injection
-def get_user(username):
-    conn = sqlite3.connect("app.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE name = '" + username + "'")
-    return cursor.fetchone()
-
-# BAD: weak hash
-def hash_password(pwd):
-    return hashlib.md5(pwd.encode()).hexdigest()
-
-# BAD: SSL verification disabled
-import requests
-resp = requests.get("https://api.example.com", verify=False)
-```
-
-3. Push it and run the agent against your new repo.
-
-### Option C — dry run on this very repository
-
-```bash
-python security_agent.py --repo https://github.com/<your-username>/security-agent
+# With GitHub token
+python security_agent.py --repo https://github.com/owner/repo --token YOUR_TOKEN --output report.md
 ```
 
 ---
 
-## Understanding the output
+## 📋 Requirements
 
-```
-[1/4] Parsed owner='anxolerd', repo='dvpwa'
-[2/4] Default branch: 'master'
-[3/4] Fetching file tree …
-      42 total files, 18 match supported extensions
-[4/4] Fetching and scanning files …
-
-  [  1/18] dvpwa/settings.py … 3 issue(s) found
-  [  2/18] dvpwa/views.py    … 2 issue(s) found
-  [  3/18] requirements.txt  … ✓ clean
-  ...
-
-📊  Scan complete.
-    Files analysed : 18
-    Issues found   : 11
-```
-
-The generated Markdown report has four sections:
-
-| Section | What it shows |
-|---|---|
-| **Summary table** | Count per risk level (Critical / High / Medium / Low) |
-| **Detailed findings** | For each issue: file, line, why it's dangerous, offending code, fix |
-| **Overall recommendations** | Project-wide security improvements |
+- Python **3.10+**
+- **Zero third-party dependencies** — uses only Python standard library
+- GitHub token optional (recommended to avoid rate limits)
 
 ---
 
-## Project structure
+## 📁 Project Structure
 
 ```
 security-agent/
-├── security_agent.py   ← the main script (single file, no dependencies)
-└── README.md           ← this file
+├── app.py                  ← Desktop GUI (Tkinter)
+├── security_agent.py       ← Scan engine + CLI
+├── generate_icon.py        ← App icon helper
+├── assets/                 ← Icons and resources
+├── Screenshots/            ← UI screenshots and sample report
+├── bob_sessions/           ← IBM Bob IDE task session evidence
+└── README.md
 ```
 
 ---
 
-## Extending the agent
+## 🤖 Built With IBM Bob IDE
 
-The script is designed to be extended. Here are common next steps:
+This project was built using **IBM Bob IDE** as the core AI component.
+Bob's agent mode and task system were used to:
+- Architect the full application
+- Write the scan engine logic
+- Build the GUI interface
+- Design the vulnerability detection patterns
 
-### Add more patterns
-In `security_agent.py`, find `SECRET_PATTERNS`, `SQLI_PATTERNS`, `XSS_PATTERNS`, or
-`CRYPTO_PATTERNS` and append a `(regex, title)` tuple.
+Bob session evidence is in the [`bob_sessions/`](bob_sessions/) folder.
 
-### Add LLM-powered deep review
-After `scan_file_statically()` returns, you can call any LLM API with a prompt like:
-
-```python
-REVIEW_PROMPT = """
-You are a senior application security engineer.
-Review the following {language} code for:
-- Hardcoded secrets or credentials
-- Injection vulnerabilities (SQL, command, LDAP)
-- XSS and output encoding issues
-- Insecure authentication or session management
-- Sensitive data exposure
-- Insecure dependencies or imports
-- Any other OWASP Top 10 issues
-
-For each issue found, state:
-1. Risk level (Critical / High / Medium / Low)
-2. Line number
-3. Why it is dangerous
-4. A fixed version of the code
-
-Code to review:
 ---
-{code}
----
-"""
+
+## 🧪 Test It Yourself
+
+```bash
+# PyGoat — OWASP Python/Django vulnerable app
+python security_agent.py --repo https://github.com/adeyosemanputra/pygoat --output report.md
+
+# DVPWA — Django vulnerable web app  
+python security_agent.py --repo https://github.com/anxolerd/dvpwa --output report.md
 ```
 
-Call `client.chat.completions.create(...)` (OpenAI SDK / watsonx compatible endpoint)
-and append the structured response to `report.issues`.
-
-### Output formats
-Replace or extend `generate_report()` to emit JSON, HTML, or SARIF
-(Static Analysis Results Interchange Format, accepted by GitHub Code Scanning).
-
 ---
 
-*IBM Bob Hackathon — Security Code Review Agent*
+## 📄 Sample Report
+
+A full sample report from scanning PyGoat is available at  
+[`Screenshots/Scan Report.txt`](Screenshots/Scan%20Report.txt)
