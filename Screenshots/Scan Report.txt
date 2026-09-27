@@ -1,0 +1,527 @@
+# 🔐 Security Code Review Report
+
+**Repository:** https://github.com/adeyosemanputra/pygoat
+**Files analysed:** 100
+**Total issues found:** 24
+
+## Summary
+
+| Risk Level | Count |
+|------------|-------|
+| 🔴 Critical | 8 |
+| 🟠 High | 6 |
+| 🟡 Medium | 10 |
+| 🟢 Low | 0 |
+
+## Detailed Findings
+
+### 1. 🔴 [Critical] Hardcoded secret key
+
+- **File:** `dockerized_labs/broken_auth_lab/app.py`
+- **Line:** 8
+
+**Why it is dangerous:**
+> Secret keys in code allow attackers to forge tokens, decrypt data, or impersonate the application.
+
+**Offending code:**
+```
+app.secret_key = 'your-secret-key-here'  # Vulnerable: Hardcoded secret key
+```
+
+**Recommended fix:**
+```
+Use os.environ or a secrets manager. Never commit secrets to git.
+Rotate the exposed secret immediately.
+```
+
+---
+
+### 2. 🔴 [Critical] Hardcoded API key
+
+- **File:** `dockerized_labs/sensitive_data_exposure/entrypoint.sh`
+- **Line:** 11
+
+**Why it is dangerous:**
+> API keys in source code are easily scraped by attackers and can lead to account takeover, data theft, or unexpected billing.
+
+**Offending code:**
+```
+echo "from django.contrib.auth.models import User; from dataexposure.models import UserData; demo_user = User.objects.filter(username='demo').exists() or User.objects.create_user('demo', 'demo@example
+```
+
+**Recommended fix:**
+```
+Store the key in an environment variable or .env file (excluded from git):
+  api_key = os.environ['SERVICE_API_KEY']
+```
+
+---
+
+### 3. 🔴 [Critical] Hardcoded secret key
+
+- **File:** `dockerized_labs/sensitive_data_exposure/sensitive_data_lab/settings.py`
+- **Line:** 8
+
+**Why it is dangerous:**
+> Secret keys in code allow attackers to forge tokens, decrypt data, or impersonate the application.
+
+**Offending code:**
+```
+SECRET_KEY = 'django-insecure-key-for-demonstration-only'
+```
+
+**Recommended fix:**
+```
+Use os.environ or a secrets manager. Never commit secrets to git.
+Rotate the exposed secret immediately.
+```
+
+---
+
+### 4. 🔴 [Critical] Hardcoded password
+
+- **File:** `introduction/views.py`
+- **Line:** 866
+
+**Why it is dangerous:**
+> Passwords committed to source control are exposed to anyone with repository access and leak into git history permanently.
+
+**Offending code:**
+```
+sql_instance = sql_lab_table(id="admin", password="65079b006e85a7e798abecb99e47c154")
+```
+
+**Recommended fix:**
+```
+Move the password to an environment variable:
+  password = os.environ['DB_PASSWORD']
+Or use a secrets manager such as HashiCorp Vault or AWS Secrets Manager.
+```
+
+---
+
+### 5. 🔴 [Critical] Hardcoded password
+
+- **File:** `introduction/views.py`
+- **Line:** 868
+
+**Why it is dangerous:**
+> Passwords committed to source control are exposed to anyone with repository access and leak into git history permanently.
+
+**Offending code:**
+```
+sql_instance = sql_lab_table(id="jack", password="jack")
+```
+
+**Recommended fix:**
+```
+Move the password to an environment variable:
+  password = os.environ['DB_PASSWORD']
+Or use a secrets manager such as HashiCorp Vault or AWS Secrets Manager.
+```
+
+---
+
+### 6. 🔴 [Critical] Hardcoded password
+
+- **File:** `introduction/views.py`
+- **Line:** 870
+
+**Why it is dangerous:**
+> Passwords committed to source control are exposed to anyone with repository access and leak into git history permanently.
+
+**Offending code:**
+```
+sql_instance = sql_lab_table(id="slinky", password="b4f945433ea4c369c12741f62a23ccc0")
+```
+
+**Recommended fix:**
+```
+Move the password to an environment variable:
+  password = os.environ['DB_PASSWORD']
+Or use a secrets manager such as HashiCorp Vault or AWS Secrets Manager.
+```
+
+---
+
+### 7. 🔴 [Critical] Hardcoded password
+
+- **File:** `introduction/views.py`
+- **Line:** 872
+
+**Why it is dangerous:**
+> Passwords committed to source control are exposed to anyone with repository access and leak into git history permanently.
+
+**Offending code:**
+```
+sql_instance = sql_lab_table(id="bloke", password="f8d1ce191319ea8f4d1d26e65e130dd5")
+```
+
+**Recommended fix:**
+```
+Move the password to an environment variable:
+  password = os.environ['DB_PASSWORD']
+Or use a secrets manager such as HashiCorp Vault or AWS Secrets Manager.
+```
+
+---
+
+### 8. 🔴 [Critical] Hardcoded secret key
+
+- **File:** `pygoat/settings.py`
+- **Line:** 25
+
+**Why it is dangerous:**
+> Secret keys in code allow attackers to forge tokens, decrypt data, or impersonate the application.
+
+**Offending code:**
+```
+SECRET_KEY = 'lr66%-a!$km5ed@n5ug!tya5bv!0(yqwa1tn!q%0%3m2nh%oml'
+```
+
+**Recommended fix:**
+```
+Use os.environ or a secrets manager. Never commit secrets to git.
+Rotate the exposed secret immediately.
+```
+
+---
+
+### 9. 🟠 [High] eval() usage (code injection risk)
+
+- **File:** `introduction/mitre.py`
+- **Line:** 218
+
+**Why it is dangerous:**
+> eval() executes arbitrary code — never pass user input to it.
+
+**Offending code:**
+```
+result = eval(expression)
+```
+
+**Recommended fix:**
+```
+Eliminate eval(). Parse JSON with JSON.parse(), execute known functions by name from a whitelist.
+```
+
+---
+
+### 10. 🟠 [High] Direct innerHTML assignment (XSS risk)
+
+- **File:** `introduction/static/js/a9.js`
+- **Line:** 40
+
+**Why it is dangerous:**
+> Setting innerHTML with untrusted data allows script injection in the victim's browser.
+
+**Offending code:**
+```
+li.innerHTML = data.logs[i];
+```
+
+**Recommended fix:**
+```
+Use textContent instead of innerHTML, or sanitise with DOMPurify:
+  element.textContent = userInput;
+```
+
+---
+
+### 11. 🟠 [High] SQL query built by string concatenation
+
+- **File:** `introduction/views.py`
+- **Line:** 158
+
+**Why it is dangerous:**
+> String concatenation for SQL is a classic injection vector.
+
+**Offending code:**
+```
+sql_query = "SELECT * FROM introduction_login WHERE user='"+name+"' AND password='"+password+"'"
+```
+
+**Recommended fix:**
+```
+Use parameterised queries or an ORM instead of concatenation.
+```
+
+---
+
+### 12. 🟠 [High] SQL query built by string concatenation
+
+- **File:** `introduction/views.py`
+- **Line:** 864
+
+**Why it is dangerous:**
+> String concatenation for SQL is a classic injection vector.
+
+**Offending code:**
+```
+sql_query = "SELECT * FROM introduction_sql_lab_table WHERE id='"+name+"'AND password='"+password+"'"
+```
+
+**Recommended fix:**
+```
+Use parameterised queries or an ORM instead of concatenation.
+```
+
+---
+
+### 13. 🟠 [High] eval() usage (code injection risk)
+
+- **File:** `introduction/views.py`
+- **Line:** 460
+
+**Why it is dangerous:**
+> eval() executes arbitrary code — never pass user input to it.
+
+**Offending code:**
+```
+output = eval(val)
+```
+
+**Recommended fix:**
+```
+Eliminate eval(). Parse JSON with JSON.parse(), execute known functions by name from a whitelist.
+```
+
+---
+
+### 14. 🟠 [High] eval() usage (code injection risk)
+
+- **File:** `introduction/views.py`
+- **Line:** 588
+
+**Why it is dangerous:**
+> eval() executes arbitrary code — never pass user input to it.
+
+**Offending code:**
+```
+output = ImageMath.eval(function_str,img = img, b=b, r=r, g=g)
+```
+
+**Recommended fix:**
+```
+Eliminate eval(). Parse JSON with JSON.parse(), execute known functions by name from a whitelist.
+```
+
+---
+
+### 15. 🟡 [Medium] MD5 usage (weak hash algorithm)
+
+- **File:** `dockerized_labs/broken_auth_lab/app.py`
+- **Line:** 86
+
+**Why it is dangerous:**
+> MD5 is cryptographically broken and should not be used for passwords, integrity checks, or signatures.
+
+**Offending code:**
+```
+token = hashlib.md5(f"{email}:{datetime.now()}".encode()).hexdigest()
+```
+
+**Recommended fix:**
+```
+Replace with SHA-256 (hashlib.sha256) or bcrypt for passwords.
+```
+
+---
+
+### 16. 🟡 [Medium] Debug mode enabled in configuration
+
+- **File:** `dockerized_labs/broken_auth_lab/app.py`
+- **Line:** 123
+
+**Why it is dangerous:**
+> Debug mode exposes stack traces, environment variables, and internal routes to end users.
+
+**Offending code:**
+```
+app.run(host='0.0.0.0', port=5000, debug=True)  # Vulnerable: Debug mode enabled in production
+```
+
+**Recommended fix:**
+```
+Set DEBUG = False in production. Control via environment variable:
+  DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
+```
+
+---
+
+### 17. 🟡 [Medium] Django SECRET_KEY appears short / weak
+
+- **File:** `dockerized_labs/broken_auth_lab/app.py`
+- **Line:** 8
+
+**Why it is dangerous:**
+> A short SECRET_KEY weakens CSRF tokens, sessions, and signatures.
+
+**Offending code:**
+```
+app.secret_key = 'your-secret-key-here'  # Vulnerable: Hardcoded secret key
+```
+
+**Recommended fix:**
+```
+Generate a strong key:
+  python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+---
+
+### 18. 🟡 [Medium] Debug mode enabled in configuration
+
+- **File:** `dockerized_labs/sensitive_data_exposure/sensitive_data_lab/settings.py`
+- **Line:** 11
+
+**Why it is dangerous:**
+> Debug mode exposes stack traces, environment variables, and internal routes to end users.
+
+**Offending code:**
+```
+DEBUG = True
+```
+
+**Recommended fix:**
+```
+Set DEBUG = False in production. Control via environment variable:
+  DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
+```
+
+---
+
+### 19. 🟡 [Medium] Django ALLOWED_HOSTS set to wildcard
+
+- **File:** `dockerized_labs/sensitive_data_exposure/sensitive_data_lab/settings.py`
+- **Line:** 13
+
+**Why it is dangerous:**
+> Wildcard ALLOWED_HOSTS disables Django's Host header validation, enabling host-header injection attacks.
+
+**Offending code:**
+```
+ALLOWED_HOSTS = ['*']
+```
+
+**Recommended fix:**
+```
+List specific hostnames:
+  ALLOWED_HOSTS = ['yourdomain.com', 'www.yourdomain.com']
+```
+
+---
+
+### 20. 🟡 [Medium] MD5 usage (weak hash algorithm)
+
+- **File:** `introduction/mitre.py`
+- **Line:** 4
+
+**Why it is dangerous:**
+> MD5 is cryptographically broken and should not be used for passwords, integrity checks, or signatures.
+
+**Offending code:**
+```
+from hashlib import md5
+```
+
+**Recommended fix:**
+```
+Replace with SHA-256 (hashlib.sha256) or bcrypt for passwords.
+```
+
+---
+
+### 21. 🟡 [Medium] MD5 usage (weak hash algorithm)
+
+- **File:** `introduction/mitre.py`
+- **Line:** 161
+
+**Why it is dangerous:**
+> MD5 is cryptographically broken and should not be used for passwords, integrity checks, or signatures.
+
+**Offending code:**
+```
+password = md5(password.encode()).hexdigest()
+```
+
+**Recommended fix:**
+```
+Replace with SHA-256 (hashlib.sha256) or bcrypt for passwords.
+```
+
+---
+
+### 22. 🟡 [Medium] MD5 usage (weak hash algorithm)
+
+- **File:** `introduction/views.py`
+- **Line:** 14
+
+**Why it is dangerous:**
+> MD5 is cryptographically broken and should not be used for passwords, integrity checks, or signatures.
+
+**Offending code:**
+```
+from hashlib import md5
+```
+
+**Recommended fix:**
+```
+Replace with SHA-256 (hashlib.sha256) or bcrypt for passwords.
+```
+
+---
+
+### 23. 🟡 [Medium] MD5 usage (weak hash algorithm)
+
+- **File:** `introduction/views.py`
+- **Line:** 1026
+
+**Why it is dangerous:**
+> MD5 is cryptographically broken and should not be used for passwords, integrity checks, or signatures.
+
+**Offending code:**
+```
+password = md5(password.encode()).hexdigest()
+```
+
+**Recommended fix:**
+```
+Replace with SHA-256 (hashlib.sha256) or bcrypt for passwords.
+```
+
+---
+
+### 24. 🟡 [Medium] Debug mode enabled in configuration
+
+- **File:** `pygoat/settings.py`
+- **Line:** 30
+
+**Why it is dangerous:**
+> Debug mode exposes stack traces, environment variables, and internal routes to end users.
+
+**Offending code:**
+```
+DEBUG = True
+```
+
+**Recommended fix:**
+```
+Set DEBUG = False in production. Control via environment variable:
+  DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
+```
+
+---
+
+## Overall Recommendations
+
+- Add a `.gitignore` entry for `.env` files and never commit secrets.
+- Enable GitHub secret scanning (Settings → Security → Secret scanning).
+- Integrate a SAST tool (Bandit for Python, ESLint security plugin for JS) into your CI/CD pipeline.
+- Use parameterised queries or an ORM for all database interactions.
+- Apply the principle of least privilege for all API keys and IAM roles.
+- Keep all dependencies up to date — run `pip audit` / `npm audit` regularly.
+- Enable HTTPS everywhere and do not disable certificate verification.
+
+---
+*Report generated by the IBM Bob Hackathon — Security Code Review Agent*
